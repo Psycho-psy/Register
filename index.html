@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>Church Attendance Register</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#faf8f4;--fg:#222;--card:#fff;--line:#d9d3c7;--acc:#1f5f4a;--p:#d6efe2;--a:#f6d9d6;--mut:#777}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#171917;--fg:#eee;--card:#222522;--line:#3a3d3a;--acc:#5fc4a0;--p:#1f4a3a;--a:#5a2a26;--mut:#999}}
+:root[data-theme="dark"]{--bg:#171917;--fg:#eee;--card:#222522;--line:#3a3d3a;--acc:#5fc4a0;--p:#1f4a3a;--a:#5a2a26;--mut:#999}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px system-ui,sans-serif;padding:12px}
+h1{font:600 20px Georgia,serif;margin:0 0 2px}
+.top{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin-bottom:10px}
+button,input,select{font:inherit;color:var(--fg);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:7px 10px}
+button{cursor:pointer}button.pri{background:var(--acc);color:#fff;border-color:var(--acc)}
+.bar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.wrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--card);max-width:100%}
+table{border-collapse:collapse;width:max-content;min-width:100%}
+th,td{border:1px solid var(--line);padding:0;text-align:center;min-width:46px;height:38px}
+th{font-size:12px;font-weight:600;padding:4px;background:var(--bg)}
+td.n,th.n{position:sticky;left:0;background:var(--card);text-align:left;min-width:170px;padding:0 8px;z-index:1;cursor:pointer}
+th.n{background:var(--bg)}
+td.c{cursor:pointer;user-select:none;font-weight:700}
+td.c.P{background:var(--p);color:var(--acc)}td.c.A{background:var(--a)}
+tfoot td{font-weight:600;background:var(--bg);cursor:default}
+.mut{color:var(--mut);font-size:12px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px;display:none}
+.panel.on{display:block}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.grid label{display:flex;flex-direction:column;font-size:12px;color:var(--mut);gap:3px}
+.seg button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+td.m input{width:62px;border:0;border-radius:0;background:transparent;text-align:center;padding:6px 2px}
+td.m.has{background:var(--p)}
+textarea{width:100%;min-height:70px;font:inherit;color:var(--fg);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px;box-sizing:border-box}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin:10px 0}
+.cols div{font-size:14px}.tag{display:inline-block;padding:1px 8px;border-radius:10px;margin:2px 2px 0 0;font-size:13px}
+.tp{background:var(--p)}.ta{background:var(--a)}.dng{color:#c0392b}
+
+input,select,textarea{font-size:16px}
+.wrap{-webkit-overflow-scrolling:touch;max-height:calc(100vh - 220px);overflow:auto}
+thead th{position:sticky;top:0;z-index:2}th.n{z-index:3}
+td.n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:640px){
+  body{padding:8px}
+  h1{font-size:18px}
+  .top{flex-direction:column;align-items:flex-start}
+  .bar{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .bar .seg{grid-column:1/-1}.bar .seg button{flex:1}
+  .bar select{grid-column:1/-1}
+  button,select{min-height:44px}
+  td.n,th.n{min-width:112px;max-width:112px;font-size:13px;padding:0 6px}
+  th,td{min-width:44px;height:44px}
+  th{font-size:11px}
+  td.m input{width:52px;min-height:0}
+  .wrap{max-height:calc(100vh - 300px)}
+  .panel{padding:10px}
+  .panel button{flex:1 1 45%}
+  .grid{grid-template-columns:1fr 1fr}
+  #qe{width:110px!important}
+}
+@media (max-width:380px){.grid{grid-template-columns:1fr}.bar{grid-template-columns:1fr}}
+</style></head><body>
+<div class="top"><div><h1>Church Attendance Register</h1>
+<span class="mut">Quarter ending <input id="qe" style="width:130px;padding:2px 6px"> · <span id="sync"></span></span></div>
+<div class="mut">Attendance: tap a cell → P → A → blank. Money: type the amount.</div></div>
+
+<div class="bar">
+<button class="pri" id="addM">+ Add member</button>
+<button id="addD">+ Add Sunday</button>
+<span class="seg" style="display:flex;gap:4px"><button id="mA" class="on">Attendance</button><button id="mM">Class / ticket money</button></span>
+<button id="undo" disabled>↶ Undo</button>
+<select id="hist"><option value="">View past date…</option></select>
+<button id="exp">Download CSV</button>
+</div>
+
+<div class="panel" id="pm"><b id="pmt">New member</b>
+<div class="grid" style="margin-top:8px">
+<label>Name<input id="f_name"></label><label>Church status<input id="f_status" placeholder="e.g. Member"></label>
+<label>Age<input id="f_age" type="number"></label><label>Marital status<input id="f_marital"></label>
+<label>Address<input id="f_address"></label><label>Profession<input id="f_prof"></label></div>
+<div style="margin-top:10px;display:flex;gap:8px"><button class="pri" id="saveM">Save</button><button id="cancelM">Cancel</button><button id="delM" style="margin-left:auto;display:none">Delete member</button></div></div>
+
+<div class="panel" id="pd"><b>New Sunday / service date</b>
+<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><input type="date" id="f_date"><button class="pri" id="saveD">Add</button><button id="cancelD">Cancel</button></div></div>
+
+<div class="panel" id="pv"><b id="pvt"></b>
+<div class="cols"><div><b>Present (<span id="cp"></span>)</b><br><span id="lp"></span></div><div><b>Absent (<span id="ca"></span>)</b><br><span id="la"></span></div><div><b>Not marked (<span id="cn"></span>)</b><br><span id="ln"></span></div></div>
+<div>Total class &amp; ticket money: <b id="vm"></b></div>
+<div style="margin:10px 0 4px" class="mut">Notes about this day (what happened)</div><textarea id="note" placeholder="e.g. Visiting preacher, special thanksgiving…"></textarea>
+<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"><button id="clrD" class="dng">Clear this date's marks &amp; money</button><button id="rmD" class="dng">Remove date</button><button id="closeV" style="margin-left:auto">Close</button></div></div>
+
+<div class="wrap"><table id="t"></table></div>
+<p class="mut">Tap a name to edit details. Tap a date heading to remove that date.</p>
+
+<script>
+const KEY="church-register-v1";
+const names=["Thomas Fakuo","Stella Quansah","Eric Agyei Botwe","Abeiku Sam","Raphael Asamoah","Gifty Agyapong","Priscilla Kyei","Cassandra Quansah","Georgina Arthur","Hannah Adams","Philomina Akahoho","Agnes Asirifi","Ernestina Agyapong","Benjamin Yebroh","Helen Agyapong"];
+const dates=["2026-07-05","2026-07-12","2026-07-19","2026-07-26","2026-08-02","2026-08-09","2026-08-16","2026-08-23","2026-08-30","2026-09-06","2026-09-13","2026-09-20","2026-09-27"];
+const ymd=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+function newQuarter(){
+  const t=new Date();t.setHours(0,0,0,0);const q=Math.floor(t.getMonth()/3);
+  const end=new Date(t.getFullYear(),q*3+3,0);const d=new Date(t);while(d.getDay()!==0)d.setDate(d.getDate()+1);
+  const ds=[];while(d<=end){ds.push(ymd(d));d.setDate(d.getDate()+7)}
+  const ord=["1st","2nd","3rd","4th"][q];
+  return{quarter:ord+" Quarter – "+end.getDate()+" "+end.toLocaleString("en-GB",{month:"long"})+" "+end.getFullYear(),dates:ds};
+}
+let S={v:2,quarter:"3rd Quarter – 30th Sept 2026",members:names.map((n,i)=>({id:"m"+i,name:n,status:"",age:"",marital:"",address:"",prof:""})),dates:[],att:{},money:{},notes:{}};
+Object.assign(S,newQuarter());
+let db=null,editing=null,mode='att',curD=null,hist=[];
+const fm=n=>n%1?n.toFixed(2):String(n);
+const moneyOf=d=>Object.values(S.money[d]||{}).reduce((a,b)=>a+(+b||0),0);
+function snap(){hist.push(JSON.stringify(S));if(hist.length>40)hist.shift();$('undo').disabled=false}
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmt=d=>{const[y,m,x]=d.split("-");return x+"/"+m+"/"+y.slice(2)};
+
+function render(){
+  $("qe").value=S.quarter;
+  let h='<thead><tr><th class="n">#  Name</th>'+S.dates.map(d=>`<th data-d="${d}" style="cursor:pointer">${fmt(d)}</th>`).join("")+'<th>Total P</th><th>Total money</th></tr></thead><tbody>';
+  S.members.forEach((m,i)=>{
+    let tp=0,tm=0;
+    const cells=S.dates.map(d=>{const v=(S.att[d]||{})[m.id]||"";const mo=(S.money[d]||{})[m.id];if(v==="P")tp++;tm+=+mo||0;
+      return mode==="att"?`<td class="c ${v}" data-d="${d}" data-m="${m.id}">${v}</td>`:`<td class="m ${mo?"has":""}"><input type="number" inputmode="decimal" step="any" min="0" data-d="${d}" data-m="${m.id}" value="${mo??""}"></td>`}).join("");
+    h+=`<tr><td class="n" data-e="${m.id}">${i+1}. ${esc(m.name)}</td>${cells}<td><b>${tp}</b></td><td><b>${fm(tm)}</b></td></tr>`;
+  });
+  const tpAll=S.dates.reduce((s2,d)=>s2+Object.values(S.att[d]||{}).filter(v=>v==="P").length,0);
+  h+='</tbody><tfoot><tr><td class="n">Total present</td>'+S.dates.map(d=>`<td>${Object.values(S.att[d]||{}).filter(v=>v==="P").length}</td>`).join("")+`<td>${tpAll}</td><td></td></tr>`;
+  h+='<tr><td class="n">Total weekly receipts</td>'+S.dates.map(d=>`<td>${fm(moneyOf(d))}</td>`).join("")+`<td></td><td>${fm(S.dates.reduce((a,d)=>a+moneyOf(d),0))}</td></tr></tfoot>`;
+  $("t").innerHTML=h;
+  $("mA").classList.toggle("on",mode==="att");$("mM").classList.toggle("on",mode==="money");
+  const today=new Date().toISOString().slice(0,10);
+  $("hist").innerHTML='<option value="">View past date…</option>'+S.dates.filter(d=>d<=today).reverse().map(d=>`<option value="${d}">${fmt(d)}</option>`).join("");
+}
+let timer;
+function save(){
+  const json=JSON.stringify(S);
+  try{localStorage.setItem(KEY,json)}catch(e){}
+  clearTimeout(timer);
+  timer=setTimeout(async()=>{
+    if(db){try{await db.doc("register/main").set({json});$("sync").textContent="Saved ✓"}catch(e){$("sync").textContent="Saved on this device only"}}
+    else $("sync").textContent="Saved on this device";
+  },400);
+}
+function load(raw){try{const o=JSON.parse(raw);if(o&&o.members&&o.dates){if(o.v!==2){const old={quarter:o.quarter,dates:o.dates,att:o.att||{},money:o.money||{},notes:o.notes||{}};o={v:2,members:o.members,att:{},money:{},notes:{},archive:[...(o.archive||[]),old],...newQuarter()};setTimeout(save,600)}S=o;S.att=S.att||{};S.money=S.money||{};S.notes=S.notes||{};return true}}catch(e){}return false}
+
+$("t").addEventListener("click",e=>{
+  const c=e.target.closest("td.c");
+  if(c){const{d,m}=c.dataset;S.att[d]=S.att[d]||{};const v=S.att[d][m]||"";snap();const n=v===""?"P":v==="P"?"A":"";
+    if(n)S.att[d][m]=n;else delete S.att[d][m];save();render();return}
+  const n=e.target.closest("td.n[data-e]");if(n)return openM(n.dataset.e);
+  const th=e.target.closest("th[data-d]");
+  if(th)openDay(th.dataset.d);
+});
+$("t").addEventListener("change",e=>{
+  const i=e.target;if(!i.dataset.m||i.type!=="number")return;
+  snap();const{d,m}=i.dataset;S.money[d]=S.money[d]||{};
+  if(i.value===""||+i.value===0)delete S.money[d][m];else S.money[d][m]=+i.value;
+  save();render();
+});
+$("mA").onclick=()=>{mode="att";render()};$("mM").onclick=()=>{mode="money";render()};
+$("undo").onclick=()=>{if(!hist.length)return;S=JSON.parse(hist.pop());$("undo").disabled=!hist.length;save();render();if(curD)openDay(curD)};
+$("hist").onchange=e=>{if(e.target.value)openDay(e.target.value);e.target.value=""};
+
+function openDay(d){
+  curD=d;const a=S.att[d]||{};
+  const L=(f)=>S.members.filter(m=>f(a[m.id]||"")).map(m=>m.name);
+  const pr=L(v=>v==="P"),ab=L(v=>v==="A"),nm=L(v=>v==="");
+  const tags=(arr,c)=>arr.length?arr.map(n=>`<span class="tag ${c}">${esc(n)}</span>`).join(""):'<span class="mut">None</span>';
+  $("pvt").textContent=new Date(d+"T00:00").toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+  $("cp").textContent=pr.length;$("ca").textContent=ab.length;$("cn").textContent=nm.length;
+  $("lp").innerHTML=tags(pr,"tp");$("la").innerHTML=tags(ab,"ta");$("ln").innerHTML=tags(nm,"");
+  $("vm").textContent=fm(moneyOf(d));$("note").value=S.notes[d]||"";
+  $("pv").classList.add("on");$("pm").classList.remove("on");$("pd").classList.remove("on");$("pv").scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+$("note").onchange=e=>{if(curD){S.notes[curD]=e.target.value;save()}};
+$("closeV").onclick=()=>{$("pv").classList.remove("on");curD=null};
+$("clrD").onclick=()=>{if(curD&&confirm("Clear all attendance marks and money for this date?")){snap();delete S.att[curD];delete S.money[curD];save();render();openDay(curD)}};
+$("rmD").onclick=()=>{if(curD&&confirm("Remove this date completely?")){snap();S.dates=S.dates.filter(x=>x!==curD);delete S.att[curD];delete S.money[curD];delete S.notes[curD];$("pv").classList.remove("on");curD=null;save();render()}};
+$("qe").onchange=e=>{S.quarter=e.target.value;save()};
+
+function openM(id){
+  editing=id;const m=S.members.find(x=>x.id===id)||{};
+  $("pmt").textContent=id?"Edit member":"New member";
+  $("f_name").value=m.name||"";$("f_status").value=m.status||"";$("f_age").value=m.age||"";
+  $("f_marital").value=m.marital||"";$("f_address").value=m.address||"";$("f_prof").value=m.prof||"";
+  $("delM").style.display=id?"block":"none";$("pm").classList.add("on");$("pd").classList.remove("on");$("f_name").focus();
+}
+$("addM").onclick=()=>openM(null);
+$("cancelM").onclick=()=>$("pm").classList.remove("on");
+$("saveM").onclick=()=>{
+  const name=$("f_name").value.trim();if(!name)return $("f_name").focus();
+  const d={name,status:$("f_status").value,age:$("f_age").value,marital:$("f_marital").value,address:$("f_address").value,prof:$("f_prof").value};
+  snap();if(editing)Object.assign(S.members.find(x=>x.id===editing),d);else S.members.push({id:"m"+Date.now(),...d});
+  $("pm").classList.remove("on");save();render();
+};
+$("delM").onclick=()=>{if(confirm("Delete this member and their attendance?")){snap();S.members=S.members.filter(x=>x.id!==editing);Object.values(S.att).forEach(a=>delete a[editing]);Object.values(S.money).forEach(a=>delete a[editing]);$("pm").classList.remove("on");save();render()}};
+
+$("addD").onclick=()=>{$("pd").classList.add("on");$("pm").classList.remove("on");
+  const last=S.dates[S.dates.length-1];const d=last?new Date(last+"T00:00"):new Date();if(last)d.setDate(d.getDate()+7);
+  $("f_date").value=d.toISOString().slice(0,10)};
+$("cancelD").onclick=()=>$("pd").classList.remove("on");
+$("saveD").onclick=()=>{const v=$("f_date").value;if(!v||S.dates.includes(v))return;snap();S.dates.push(v);S.dates.sort();$("pd").classList.remove("on");save();render()};
+
+$("exp").onclick=async()=>{
+  const rows=[["No","Name","Status","Age","Marital","Address","Profession",...S.dates.map(d=>fmt(d)+" att"),...S.dates.map(d=>fmt(d)+" money"),"Total P","Total money"]];
+  S.members.forEach((m,i)=>{const v=S.dates.map(d=>(S.att[d]||{})[m.id]||"");const mo=S.dates.map(d=>(S.money[d]||{})[m.id]||"");rows.push([i+1,m.name,m.status,m.age,m.marital,m.address,m.prof,...v,...mo,v.filter(x=>x==="P").length,mo.reduce((a,b)=>a+(+b||0),0)])});
+  const csv=rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(",")).join("\n");
+  try{const dl=typeof claude!=="undefined"&&await claude.use("downloads");if(dl){await dl.save({filename:"attendance.csv",data:csv});return}}catch(e){}
+  try{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download="attendance.csv";a.click()}catch(e){}
+};
+
+render();
+try{const r=localStorage.getItem(KEY);if(r&&load(r))render()}catch(e){}
+(async()=>{
+  try{
+    db=typeof claude!=="undefined"?await claude.use("db"):null;
+    if(db){const s=await db.doc("register/main").get();
+      if(s.exists&&load(s.data().json)){render();$("sync").textContent="Loaded ✓"}
+      else{await db.doc("register/main").set({json:JSON.stringify(S)});$("sync").textContent="Ready"}}
+    else $("sync").textContent="Saved on this device";
+  }catch(e){$("sync").textContent="Saved on this device"}
+})();
+</script></body></html>
